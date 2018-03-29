@@ -1,0 +1,3 @@
+#Ignorare directory xtemp template
+/xtemp/**
+/template/**
