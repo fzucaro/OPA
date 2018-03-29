@@ -25,6 +25,7 @@ END
 -- ************************************************************************************************************************
 CREATE TABLE [SK_F2_FLUSSI].[F2_T_EXP_PattiParasociali](
 	[Data_estrazione] [date] NOT NULL,
+	[Id_Operazione] int NOT NULL,
 	[ABI_Segnalante] [nvarchar](5) NOT NULL,
 	[SNDG_Partecipata] [nvarchar](16) NULL,
 	[Codice_Istituto] [nvarchar](2) NOT NULL,
@@ -33,6 +34,12 @@ CREATE TABLE [SK_F2_FLUSSI].[F2_T_EXP_PattiParasociali](
 	[Cod_TipologiaPatto] [nvarchar](20) NULL,
 	[Perc_Totale] [decimal](10, 3) NULL,
 	[Ragione_Sociale] [nvarchar](max) NULL,
+	[Denominazione_aderente] [nvarchar](250) NULL,
+	[Id_patto]			int NULL,
+	[SNDG_aderente]		[nvarchar](16) NULL,
+	[Tipo_persona]		[char](2) NULL,
+	[Flag_gruppo]		bit NULL,
+	[Perc_Aderente] [decimal](10, 3) NULL,
 	[Flag_Scarto] [int] NOT NULL,
 	[Motivo_Scarto] [nvarchar](2000) NULL
 	)

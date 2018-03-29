@@ -20,6 +20,21 @@ git push -u origin master
 
  
 
+ 
+
+Patti Parasociali
+=================
+
+Documento Analisi
+
+ 
+
+ 
+
+ 
+
+ 
+
 Appunti su Git
 ==============
 
