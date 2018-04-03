@@ -105,6 +105,7 @@ BEGIN
     DECLARE @statoPartecipante NVARCHAR(100)
     DECLARE @denomPartecipante NVARCHAR(150)
     DECLARE @livelloFV NVARCHAR(3)
+    DECLARE @percEquityRatio NVARCHAR(10)
     DECLARE @percDirettaTot NVARCHAR(10)
     DECLARE @percDirettaDVTot NVARCHAR(10)
     DECLARE @idRP INT
@@ -475,6 +476,23 @@ BEGIN
                         AND (sk_f2.isSocietaGruppo(rp.id_partecipante, 'B', @dataEstrazione) = 1 OR
                              sk_f2.isSocietaGruppo(rp.id_partecipante, 'C', @dataEstrazione) = 1)
               END
+            ELSE IF @tipoOperazione = 'IND'
+              BEGIN
+                DECLARE Partecipanti_CUR CURSOR FOR
+                  SELECT
+                    rp.ID,
+                    rp.ID_Partecipante,
+                    '',
+                    '',
+                    rp.GUID_Indirette_OI,
+                    ''
+                  FROM SK_F2.F2_T_Indirette_OI rp
+                  WHERE rp.ID_Operazione = @idOperazione
+                        AND @dataEstrazione BETWEEN CONVERT(DATE, rp.Data_Inizio) AND isnull(rp.Data_Fine, '31/12/9999')
+                        AND (rp.Cancellata = 0 OR rp.Cancellata IS NULL)
+                        --AND (sk_f2.isSocietaGruppo(rp.id_partecipante, 'B', @dataEstrazione) = 1 OR
+                        --     sk_f2.isSocietaGruppo(rp.id_partecipante, 'C', @dataEstrazione) = 1)
+              END
             ELSE
               BEGIN
                 DECLARE Partecipanti_CUR CURSOR FOR
@@ -544,6 +562,7 @@ BEGIN
                 -- Ricavo dati di possesso a livello di partecipante
                 SET @idRP = 0
                 SET @valutaPartecipante = ''
+				SET @percEquityRatio = ''
                 SET @percDirettaTot = ''
                 SET @percDirettaDVTot = ''
                 SET @valBilancioIndivValuta = ''
@@ -574,6 +593,37 @@ BEGIN
                                                                             @idRP, @dataEstrazione))),
                       @valBilancioGruppo = convert(NVARCHAR, convert(DECIMAL(28, 2),
                                                                      SK_F2_REPORT.getValoreBilancioGruppoImpegni(
+                                                                         @idOperazione, @dataEstrazione)))
+                  END
+                ELSE IF @tipoOperazione = 'IND'
+                  BEGIN
+                    SET @idRP = @idRappPart
+
+                    SELECT TOP 1
+                      @valutaPartecipante = ID_Valuta,
+                      @impSuOperazione = ID_Tipo_Operazione
+                    FROM SK_F2.F2_T_Saldi_Indirette_OI sal, SK_F2.F2_T_Operazioni op
+                    WHERE sal.ID_Indiretta = @idRP and op.ID = @idOperazione
+
+                    DECLARE @quotaPartecipanteIndiretta DECIMAL(10, 3)
+                    SET @quotaPartecipanteIndiretta = convert(DECIMAL(10, 3), SK_F2.getQuotaPartecipanteIndirette(@idRP,
+                                                                                                                  @dataEstrazione)
+                                                                              * 100);
+
+                    SELECT
+                      @percEquityRatio = convert(NVARCHAR, convert(DECIMAL(10, 3),
+                                                                   SK_F2.calculate_EquityRatio_OI(@idRP, @quotaPartecipanteIndiretta,
+                                                                                                  @dataEstrazione))),
+                      @percDirettaTot = convert(NVARCHAR, @quotaPartecipanteIndiretta),
+                      @percDirettaDVTot = convert(NVARCHAR, 0),
+                      @valBilancioIndivValuta = convert(NVARCHAR, convert(DECIMAL(28, 2),
+                                                                          SK_F2_REPORT.getValoreBilancioIndirette(
+                                                                              @idRP, @dataEstrazione))),
+                      @valBilancioIndivEuro = convert(NVARCHAR, convert(DECIMAL(28, 2),
+                                                                        SK_F2_REPORT.getValoreBilancioIndiretteEuro(
+                                                                            @idRP, @dataEstrazione))),
+                      @valBilancioGruppo = convert(NVARCHAR, convert(DECIMAL(28, 2),
+                                                                     SK_F2_REPORT.getValoreBilancioGruppoIndirette(
                                                                          @idOperazione, @dataEstrazione)))
                   END
                 ELSE
@@ -936,7 +986,7 @@ BEGIN
                           , replace(ISNULL(@percDVGruppoTitolo, ''), '.', ',') -- PercDV_Gruppo_Titolo - nvarchar(10)
                           , replace(ISNULL(@percGruppoDVTotale, ''), '.', ',') -- PercDV_Gruppo_Totale - nvarchar(10)
                           , ISNULL(@livelloFV, '') -- Livello_FairValue - nvarchar(3)
-                          , '' -- TODO --  Perc_Equity_Ratio - nvarchar(10)
+                          , replace(ISNULL(@percEquityRatio, ''), '.', ',') --  Perc_Equity_Ratio - nvarchar(10)
                           , '' -- TODO --  Valore_Package - nvarchar(28)
                           , '' -- TODO --  Riserva_AFS_Netta - nvarchar(28)
                           , '' -- TODO --  Impairment_Anno_Individuale - nvarchar(28)
@@ -1283,7 +1333,7 @@ BEGIN
                           , replace(ISNULL(@percDVGruppoTitolo, ''), '.', ',') -- PercDV_Gruppo_Titolo - nvarchar(10)
                           , replace(ISNULL(@percGruppoDVTotale, ''), '.', ',') -- PercDV_Gruppo_Totale - nvarchar(10)
                           , ISNULL(@livelloFV, '') -- Livello_FairValue - nvarchar(3)
-                          , '' -- TODO --  Perc_Equity_Ratio - nvarchar(10)
+                          , replace(ISNULL(@percEquityRatio, ''), '.', ',') --  Perc_Equity_Ratio - nvarchar(10)
                           , '' -- TODO --  Valore_Package - nvarchar(28)
                           , '' -- TODO --  Riserva_AFS_Netta - nvarchar(28)
                           , '' -- TODO --  Impairment_Anno_Individuale - nvarchar(28)
@@ -1986,7 +2036,4 @@ BEGIN
       COMMIT TRANSACTION;
 
   END
-GO
-
-
-  -- ********************************************************************************************************************************
+  GO
