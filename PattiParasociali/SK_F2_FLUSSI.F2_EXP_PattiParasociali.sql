@@ -139,6 +139,8 @@ BEGIN
 		 LEFT JOIN  SK_F2.F2_T_Persona_Giuridica pg on p.ID = pg.ID_Persona
          WHERE ID_Operazione = @idOperazione
            AND (ap.Cancellata IS NULL or ap.Cancellata = 0)
+		    AND (@dataEstrazione BETWEEN CONVERT(DATE, pg.Data_Inizio) AND isnull(pg.Data_Fine, '31/12/9999')
+				     OR @dataEstrazione BETWEEN CONVERT(DATE, pf.Data_Inizio) AND isnull(pf.Data_Fine, '31/12/9999'))
 		-- effenttuo select
 
 		OPEN ADERENTI_CUR
