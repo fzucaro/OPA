@@ -3,10 +3,10 @@ GO
 /****** Object:  StoredProcedure [SK_F2_FLUSSI].[F2_EXP_MappaGruppo_Estesa]    Script Date: 06/02/2018 10:21:53 ******/
 IF EXISTS (SELECT *
              FROM sys.objects
-            WHERE OBJECT_ID = OBJECT_ID(N'[SK_F2_FLUSSI].[F2_EXP_MappaGruppo_Estesa_FITP]')
+            WHERE OBJECT_ID = OBJECT_ID(N'[SK_F2_FLUSSI].[F2_EXP_MappaGruppo_Estesa]')
               AND TYPE IN (N'P', N'RF', N'PC'))
 BEGIN
-    DROP PROCEDURE SK_F2_FLUSSI.F2_EXP_MappaGruppo_Estesa_FITP;
+    DROP PROCEDURE SK_F2_FLUSSI.F2_EXP_MappaGruppo_Estesa;
 END
 
 SET ANSI_NULLS ON
@@ -14,8 +14,14 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 -- ********************************************************************************************************************************
+/*
+Destinatari gestiti
+OPA
+FITP
 
-CREATE PROCEDURE [SK_F2_FLUSSI].[F2_EXP_MappaGruppo_Estesa_FITP]
+*/
+
+CREATE PROCEDURE [SK_F2_FLUSSI].[F2_EXP_MappaGruppo_Estesa]
 @dataEstrazione date, @destinazione nvarchar(10), @cruscotto char(1), @outputNum int OUTPUT, @outputMsg nvarchar(500) OUTPUT
 WITH EXEC AS CALLER
 AS
@@ -211,8 +217,7 @@ BEGIN
             AND p.ID = op.ID_Persona
             AND p.Data_Fine IS NULL
             AND op.ID_Stato_Operazione = 1
-    --AND op.ID = 56880
-    --AND op.ID in (56504)--, 56039) -- per i test -- DA ELIMINARE
+    
 
     OPEN Operazioni_CUR
     FETCH NEXT FROM Operazioni_CUR
@@ -224,8 +229,7 @@ BEGIN
         SET @flagScarto = 0
         SET @motivoScarto = ''
 
-        --print 'ID op: ' + convert(varchar,@idOperazione)
-        --print 'SNDG Partecipata ' + @sndgPartecipata
+        
 
         -- Ricavo dati Attributi Bilancio
         SET @valutaBilancio = ''
@@ -1679,288 +1683,56 @@ Destinazioni conosciute: BFD
 */
 
 
-	IF  (@destinazione = 'BFD') 
-		BEGIN
-			SELECT *
-			INTO #tempMappaGruppoBDF
-			FROM (
-				   SELECT
-					 '00000' AS Azienda,
-					 0       AS TipoRec,
-					 '00' + -- fisso
-					 'U5MANA01  ' + -- SSA + Periodicita + Tipo Info + Progressivo Flusso + 2 spazi
-					 left((format(GETDATE(), 'yyyy-MM-dd-HH.mm.ss.fff')) + '000000000000000', 26) +
-					 -- timestamp estrazione da
-					 left((format(GETDATE(), 'yyyy-MM-dd-HH.mm.ss.fff')) + '000000000000000', 26) +
-					 -- timestamp estrazione a
-					 'M' + -- Periodicita flusso
-					 left((format(GETDATE(), 'yyyy-MM-dd-HH.mm.00.000')) + '000000000000000', 26) +
-					 -- timestamp schedulazione
-					 format(GETDATE(), '0yyyyMMdd') + --  periodo rif
-					 'MULTI' + -- fisso a multibanca
-					 space(3395) -- filler
-							 AS record,
-					 space(928) -- filler
-							 AS record_1
-				   UNION ALL
-				   SELECT
-					 Codice_Partecipata               AS Azienda,
-					 1                                AS TipoRec,
-					 '010' + space(26) +
-					 -- fisso 01 + 0 (0=recordo in vita; 1=record cancellato) + 26 spazi (in quanto recordo in vita)
-					 convert(NVARCHAR, Data_estrazione, 112) +
-					 left(Codice_Titolo + space(20), 20) + left(Descrizione_Titolo + space(30), 30) +
-					 left(Codice_Partecipata + space(16), 16) + left(Denom_Partecipata + space(150), 150) +
-					 left(Tipo_Operazione + space(5), 5) + left(Codice_Partecipante + space(16), 16) +
-					 left(Denom_Partecipante + space(150), 150) +
-					 left(Ind_Legale_Partecipata + space(100), 100) + left(Cap_Legale_Partecipata + space(10), 10) +
-					 left(Citta_Legale_Partecipata + space(100), 100) +
-					 left(Prov_Legale_Partecipata + space(2), 2) + left(Stato_Legale_Partecipata + space(40), 40) +
-					 left(Ex_Art_3639RM + space(100), 100) +
-					 left(Ind_Legale_Partecipante + space(100), 100) + left(Cap_Legale_Partecipante + space(10), 10) +
-					 left(Citta_Legale_Partecipante + space(100), 100) +
-					 left(Prov_Legale_Partecipante + space(2), 2) + left(Stato_Legale_Partecipante + space(40), 40) +
-					 left(Valuta_CS_Partecipante + space(3), 3) + left(CR_Partecipata + space(13), 13) +
-					 left(CF_Partecipata + space(16), 16) + left(Forma_Giuridica + space(40), 40) +
-					 left(UIC_Partecipata + space(16), 16) + left(Valuta_Bilancio + space(3), 3) +
-					 left(PIVA_Partecipata + space(11), 11) + left(Descrizione_ClassBI + space(100), 100) +
-					 left(Descrizione_Attivita + space(150), 150) + left(SNDG + space(16), 16) +
-					 left(ABI_Prevalente + space(5), 5) + left(NDG_Prevalente + space(16), 16) +
-					 left(NDG_Capogruppo + space(16), 16) + left(Gruppo_Bancario + space(1), 1) +
-					 left(Gruppo_Civilistico + space(1), 1) + left(Gruppo_Assicurativo + space(1), 1) +
-					 left(SAE + space(60), 60) + left(RAE + space(100), 100) + left(ATECO + space(100), 100) +
-					 left(Nazionalita + space(1), 1) + left(Gestore_Partecipazione + space(100), 100) +
-					 left(Quotata + space(60), 60) + left(Tipo_Quotazione + space(100), 100) +
-					 left(Metodo_ConsBI + space(100), 100) + left(Metodo_ConsIAS + space(100), 100) +
-					 left(Metodo_ConsFinrep + space(100), 100) + left(Data_Inserimento + space(8), 8) +
-					 left(Class_IAS_Gruppo + space(100), 100) + left(Class_Art2359_Gruppo + space(100), 100) +
-					 left(Class_IAS_Individuale + space(100), 100) +
-					 left(Class_Art2359_Individuale + space(100), 100) + left(Class_Monitoraggio + space(100), 100) +
-					 left(Class_Antitrust + space(100), 100) +
-					 left(Tipologia_FAG + space(100), 100) + left(Centro_Resp + space(100), 100) +
-					 left(CGU + space(100), 100) + left(SNDG_ControllataRif + space(100), 100) +
-					 left(Flag_OrgInterposto + space(1), 1) + left(Flag_OpQualificata + space(1), 1) +
-					 left(Tipo_LookThrough + space(100), 100) + left(Class_PNF + space(100), 100)
-													  AS record,
-					 left(CS_Data + space(8), 8) + left(CS_Valuta + space(3), 3) +
-					 CASE WHEN len(CS_Sottoscritto_Valuta) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(CS_Sottoscritto_Valuta, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(CS_Sottoscritto_Euro) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(CS_Sottoscritto_Euro, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(CS_Deliberato_Valuta) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(CS_Deliberato_Valuta, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(CS_Deliberato_Euro) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(CS_Deliberato_Euro, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(CS_Versato_Valuta) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(CS_Versato_Valuta, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(CS_Versato_Euro) > 0
-					   THEN right(
-						   '+' + format(convert(DECIMAL(28, 2), replace(CS_Versato_Euro, ',', '.')), '0000000000000000.00'),
-						   20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(CS_ValNominale_Unitario) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(CS_ValNominale_Unitario, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(CS_Azioni) > 0
-					   THEN right(
-						   '+' + format(convert(DECIMAL(28, 2), replace(CS_Azioni, ',', '.')), '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(CS_AzioniDV) > 0
-					   THEN right(
-						   '+' + format(convert(DECIMAL(28, 2), replace(CS_AzioniDV, ',', '.')), '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(CS_AzioniDVAO) > 0
-					   THEN right(
-						   '+' + format(convert(DECIMAL(28, 2), replace(CS_AzioniDVAO, ',', '.')), '0000000000000000.00'),
-						   20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(PATR_ValoreCompl_Valuta) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(PATR_ValoreCompl_Valuta, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(PATR_ValoreCompl_Euro) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(PATR_ValoreCompl_Euro, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(PATR_Quote) > 0
-					   THEN right(
-						   '+' + format(convert(DECIMAL(28, 2), replace(PATR_Quote, ',', '.')), '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 left(Valuta_Operazione + space(3), 3) +
-					 CASE WHEN len(Valore_Civilistico_Valuta) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Valore_Civilistico_Valuta, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Valore_Civilistico_Euro) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Valore_Civilistico_Euro, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Valore_Prezzo_IAS) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Valore_Prezzo_IAS, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Valore_NominaleCompl_Divisa) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Valore_NominaleCompl_Divisa, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Valore_NominaleCompl_Euro) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Valore_NominaleCompl_Euro, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Valore_Civilistico_Gruppo) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Valore_Civilistico_Gruppo, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 left(Autonomia + space(100), 100) +
-					 CASE WHEN len(Azioni_Partecipante) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Azioni_Partecipante, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Perc_Diretta_Titolo) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 3), replace(Perc_Diretta_Titolo, ',', '.')),
-											   '000000000000000.000'), 20)
-					 ELSE '+' + replicate('0', 15) + ',000' END +
-					 CASE WHEN len(Perc_Diretta_Totale) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 3), replace(Perc_Diretta_Totale, ',', '.')),
-											   '000000000000000.000'), 20)
-					 ELSE '+' + replicate('0', 15) + ',000' END +
-					 CASE WHEN len(AzioniDV_Partecipante) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(AzioniDV_Partecipante, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(PercDV_Diretta_Titolo) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 3), replace(PercDV_Diretta_Titolo, ',', '.')),
-											   '000000000000000.000'), 20)
-					 ELSE '+' + replicate('0', 15) + ',000' END +
-					 CASE WHEN len(PercDV_Diretta_Totale) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 3), replace(PercDV_Diretta_Totale, ',', '.')),
-											   '000000000000000.000'), 20)
-					 ELSE '+' + replicate('0', 15) + ',000' END +
-					 CASE WHEN len(Azioni_Gruppo) > 0
-					   THEN right(
-						   '+' + format(convert(DECIMAL(28, 2), replace(Azioni_Gruppo, ',', '.')), '0000000000000000.00'),
-						   20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Perc_Gruppo_Titolo) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 3), replace(Perc_Gruppo_Titolo, ',', '.')),
-											   '000000000000000.000'), 20)
-					 ELSE '+' + replicate('0', 15) + ',000' END +
-					 CASE WHEN len(Perc_Gruppo_Totale) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 3), replace(Perc_Gruppo_Totale, ',', '.')),
-											   '000000000000000.000'), 20)
-					 ELSE '+' + replicate('0', 15) + ',000' END +
-					 CASE WHEN len(AzioniDV_Gruppo) > 0
-					   THEN right(
-						   '+' + format(convert(DECIMAL(28, 2), replace(AzioniDV_Gruppo, ',', '.')), '0000000000000000.00'),
-						   20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(PercDV_Gruppo_Titolo) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 3), replace(PercDV_Gruppo_Titolo, ',', '.')),
-											   '000000000000000.000'), 20)
-					 ELSE '+' + replicate('0', 15) + ',000' END +
-					 CASE WHEN len(PercDV_Gruppo_Totale) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 3), replace(PercDV_Gruppo_Totale, ',', '.')),
-											   '000000000000000.000'), 20)
-					 ELSE '+' + replicate('0', 15) + ',000' END +
-					 left(Livello_FairValue + space(3), 3) +
-					 CASE WHEN len(Perc_Equity_Ratio) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 3), replace(Perc_Equity_Ratio, ',', '.')),
-											   '000000000000000.000'), 20)
-					 ELSE '+' + replicate('0', 15) + ',000' END +
-					 CASE WHEN len(Valore_Package) > 0
-					   THEN right(
-						   '+' + format(convert(DECIMAL(28, 2), replace(Valore_Package, ',', '.')), '0000000000000000.00'),
-						   20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Riserva_AFS_Netta) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Riserva_AFS_Netta, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Impairment_Anno_Individuale) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Impairment_Anno_Individuale, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Impairment_Anno_Consolidato) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Impairment_Anno_Consolidato, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Valore_Consolidato) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Valore_Consolidato, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Valore_Consolidato_Gruppo) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Valore_Consolidato_Gruppo, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Di_Cui_Avviamenti) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Di_Cui_Avviamenti, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Riserva_AFS_Lorda) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Riserva_AFS_Lorda, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 CASE WHEN len(Delta_Valore_Civilistico) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 2), replace(Delta_Valore_Civilistico, ',', '.')),
-											   '0000000000000000.00'), 20)
-					 ELSE '+' + replicate('0', 16) + ',00' END +
-					 left(Data_Rif_BOFinance + space(8), 8) +
-					 left(Super_ISIN + space(16), 16) +
-					 left(SNDG_Partecipante + space(16), 16) +
-					 CASE WHEN len(Perc_SFP_Convertibile) > 0
-					   THEN right('+' + format(convert(DECIMAL(28, 3), replace(Perc_SFP_Convertibile, ',', '.')),
-											   '000000000000000.000'), 20)
-					 ELSE '+' + replicate('0', 15) + ',000' END +
-					 space(250) -- Filler
-					 AS record_1
-				   FROM SK_F2_FLUSSI.F2_T_EXP_MappaGruppo_Estesa
-				   WHERE Data_estrazione = @dataEstrazione
-						 AND Destinazione = @destinazione
-						 AND Flag_Scarto = 0
-				   UNION ALL
-				   SELECT
-					 '00000' AS Azienda,
-					 2       AS TipoRec,
-					 '99' + -- fisso
-					 'U5MANA01  ' + -- SSA + Periodicita + Tipo Info + Progressivo Flusso + 2 spazi
-					 left((format(GETDATE(), 'yyyy-MM-dd-HH.mm.ss.fff')) + '000000000000000', 26) +
-					 -- timestamp estrazione da
-					 left((format(GETDATE(), 'yyyy-MM-dd-HH.mm.ss.fff')) + '000000000000000', 26) +
-					 -- timestamp estrazione a
-					 'M' + -- Periodicita flusso
-					 left((format(GETDATE(), 'yyyy-MM-dd-HH.mm.00.000')) + '000000000000000', 26) +
-					 -- timestamp schedulazione
-					 right('0000000000' + cast((SELECT count(*)
-												FROM SK_F2_FLUSSI.F2_T_EXP_MappaGruppo_Estesa
-												WHERE Data_estrazione = @dataEstrazione AND Destinazione = @destinazione AND
-													  Flag_Scarto = 0) AS NVARCHAR), 9) +
-					 --  numero record senza testa e coda
-					 'MULTI' + -- fisso a multibanca
-					 space(3395) -- filler
-							 AS record,
-					 space(928) -- filler
-							 AS record_1
-				 ) tab
 
-			SELECT
-			  record,
-			  record_1
-			FROM #tempMappaGruppoBDF
-			ORDER BY TipoRec, Azienda
-		END -- end destinazione BFS
-	ELSE IF (@destinazione = 'FITP') -- Gestione del tracciato in caso di FITP
+	IF (@destinazione = 'FITP') -- Gestione del tracciato in caso di FITP
 		BEGIN
+			-- Header per FITP con campi aggiuntivi
+            SELECT *
+            INTO #tempMappaGruppoHeaderFITP
+            FROM (
+                   SELECT
+                     '00000'                                                                                     AS Azienda,
+                     0                                                                                           AS TipoRec,
+                     'Data Riferimento;Codice Titolo;Descrizione Titolo;Codice Partecipata;Azienda Partecipata;' +
+                     'Tipo Operazione;Codice Partecipante;Azienda Partecipante;Sede Legale Partecipata;' +
+                     'Cap Legale Partecipata;Città Legale Partecipata;Provincia Legale Partecipata;Nazione Legale Partecipata;'
+                     +
+                     'Articolo 36-39 RM;Sede Legale Partecipante;Cap Legale Partecipante;Città Legale Partecipante;' +
+                     'Provincia Legale Partecipante;Nazione Legale Partecipante;Valuta Cap. Soc. Pante;' +
+                     'Codice Centrale Rischi Partecipata;Codice Fiscale Partecipata;FormaGiuridica;Codice UIC;' +
+                     'Valuta di Bilancio;Partita IVA Partecipata;Descrizione Bankit;Descrizione Attività;' +
+                     'Codice NDG Di Gruppo;ABI Prevalente;NDG Prevalente;NDG Capogruppo;' +
+                     'Gruppo Bancario;Gruppo Civilistico;Gruppo Assicurativo;Settore di Attività Economica;Ramo Attività;'
+                     +
+                     'ATECO;Nazionalità;Gestore della Partecipazione;Quotata;Tipo Quotazione;' +
+                     'Metodo Consolidamento Bankit;Metodo Consolidamento Ias;Metodo Consolidamento Finrep;' +
+                     'Data Inserimento;Classificazione IAS Gruppo;Classificazione Ex Art 2359 Gruppo;' +
+                     'Classificazione IAS Individuale;Classificazione Ex Art 2359 Individuale;' +
+                     'Classificazione per Monitoraggio;Classificazione Antitrust;Tipologia FAG;' +
+                     'Centro di Responsabilità;CGU;Controllata di Riferimento;Flag Organismo Interposto;' +
+                     'Partecipazione Qualificata;Tipologia Look Through;Classificazione PNF;' +
+                     'Data Capitale Sociale;Divisa Capitale Sociale;Capitale Sociale Sottoscritto Valuta;' +
+                     'Capitale Sociale Sottoscritto Euro;Capitale Sociale Deliberato Valuta;Capitale Sociale Deliberato Euro;'
+                     +
+                     'Capitale Sociale Versato Valuta;Capitale Sociale Versato Euro;Nominale Unitario Capitale Sociale;'
+                     +
+                     'Azioni Capitale Sociale;Azioni DV Capitale Sociale;Azioni DVAO Capitale Sociale;' +
+                     'Valore Complessivo Valuta Patrimonio;Valore Complessivo Euro Patrimonio;Totale Quote Patrimonio;'
+                     +
+                     'Divisa Partecipazione;Valore Civilistico Valuta;Valore Civilistico Euro;Valore Prezzo IAS Euro;' +
+                     'Valore Nominale Comp. Divisa;Valore Nominale Comp. Euro;Valore Civilistico Gruppo/Controllate;' +
+                     'Autonomia;Numero Azioni Partecipante;% Diretta Titolo;% Diretta Totale;Numero DV;' +
+                     '% DV Diretta Titolo;% DV Diretta Totale;Numero Azioni Gruppo;% Gruppo/Controllate Titolo;' +
+                     '% Gruppo/Controllate Totale;Numero DV Gruppo;% DV Gruppo/Controllate Titolo;% DV Gruppo/Controllate Totale;'
+                     +
+                     'LivelliFairValue;% Equity Ratio;Valore Package eur;Riserva AFS Netta;Impairment Individuale Anno;'
+                     +
+                     'Impairment Consolidato Anno;Valore Consolidato;Valore Consolidato Somma Gruppo;Di cui Avviamenti;'
+                     +
+                     'Riserva AFS Lorda;Delta Differenza Valore Civilistico;Data Rif Dati BO Finance;Super ISIN;' 
+                     +
+                     'SNDG Partecipante;% SFP Convertibile;Tipo Persona;FlagGruppo;Filler' AS record
+                 ) record
 			-- Aggiungere i campi in più al tracciato TipoPersona ed AppartenenteGruppo
 			 SELECT *
 				INTO #tempMappaGruppoFITP
@@ -2010,19 +1782,29 @@ Destinazioni conosciute: BFD
 							   WHERE Data_estrazione = @dataEstrazione
 									 AND Destinazione = @destinazione
 									 AND Flag_Scarto = 0
-							 ) t2
+							 ) t1
 
 							 SELECT record
-							 FROM #tempMappaGruppoFITP
-							 ORDER BY TipoRec, Azienda
+								FROM (
+									   SELECT
+										 azienda,
+										 tiporec,
+										 record
+									   FROM #tempMappaGruppoHeaderFITP
+									   UNION ALL
+									   SELECT
+										 azienda,
+										 tiporec,
+										 record
+									   FROM #tempMappaGruppoFITP
+									 ) t2
+								ORDER BY t2.TipoRec, t2.Azienda
+							  
 		END -- caso FITP
-	ELSE    -- tutti gli altri casi non trattati
+	ELSE IF ( @destinazione = 'OPA') -- destinazione OPA  
 		BEGIN
-			IF @destinazione <> 'LP'
-        -- se la destinazione NON è Legami Partecipativi e Finanziari ci deve essere il primo record di intestazione, altrimenti no
-          BEGIN
             SELECT *
-            INTO #tempMappaGruppoInt
+            INTO #tempMappaGruppoHeaderOPA
             FROM (
                    SELECT
                      '00000'                                                                                     AS Azienda,
@@ -2067,94 +1849,84 @@ Destinazioni conosciute: BFD
                      +
                      'SNDG Partecipante;% SFP Convertibile;Filler' AS record
                  ) t1
-          END
+         
+				-- dati oPA
+				SELECT *
+				INTO #tempMappaGruppoOPA
+				FROM (
+					   SELECT
+						 Codice_Partecipata                                                     AS Azienda,
+						 1                                                                      AS TipoRec,
+						 convert(NVARCHAR, Data_estrazione, 112) + ';' + Codice_Titolo + ';' + Descrizione_Titolo + ';' +
+						 Codice_Partecipata + ';' + Denom_Partecipata + ';' +
+						 Tipo_Operazione + ';' + Codice_Partecipante + ';' + Denom_Partecipante + ';' + Ind_Legale_Partecipata +
+						 ';' +
+						 Cap_Legale_Partecipata + ';' + Citta_Legale_Partecipata + ';' + Prov_Legale_Partecipata + ';' +
+						 Stato_Legale_Partecipata + ';' + Ex_Art_3639RM + ';' + Ind_Legale_Partecipante + ';' +
+						 Cap_Legale_Partecipante + ';' + Citta_Legale_Partecipante + ';' + Prov_Legale_Partecipante + ';' +
+						 Stato_Legale_Partecipante + ';' + Valuta_CS_Partecipante + ';' + CR_Partecipata + ';' +
+						 CF_Partecipata + ';' + Forma_Giuridica + ';' + UIC_Partecipata + ';' + Valuta_Bilancio + ';' +
+						 PIVA_Partecipata + ';' + Descrizione_ClassBI + ';' + Descrizione_Attivita + ';' + SNDG + ';' +
+						 ABI_Prevalente + ';' + NDG_Prevalente + ';' + NDG_Capogruppo + ';' + Gruppo_Bancario + ';' +
+						 Gruppo_Civilistico + ';' + Gruppo_Assicurativo + ';' + SAE + ';' + RAE + ';' + ATECO + ';' +
+						 Nazionalita + ';' + Gestore_Partecipazione + ';' + Quotata + ';' + Tipo_Quotazione + ';' +
+						 Metodo_ConsBI + ';' + Metodo_ConsIAS + ';' + Metodo_ConsFinrep + ';' + Data_Inserimento + ';' +
+						 Class_IAS_Gruppo + ';' + Class_Art2359_Gruppo + ';' + Class_IAS_Individuale + ';' +
+						 Class_Art2359_Individuale + ';' + Class_Monitoraggio + ';' + Class_Antitrust + ';' +
+						 Tipologia_FAG + ';' + Centro_Resp + ';' + CGU + ';' + SNDG_ControllataRif + ';' +
+						 Flag_OrgInterposto + ';' + Flag_OpQualificata + ';' + Tipo_LookThrough + ';' + Class_PNF + ';' +
+						 CS_Data + ';' + CS_Valuta + ';' + CS_Sottoscritto_Valuta + ';' + CS_Sottoscritto_Euro + ';' +
+						 CS_Deliberato_Valuta + ';' + CS_Deliberato_Euro + ';' + CS_Versato_Valuta + ';' + CS_Versato_Euro + ';'
+						 +
+						 CS_ValNominale_Unitario + ';' + CS_Azioni + ';' + CS_AzioniDV + ';' + CS_AzioniDVAO + ';' +
+						 PATR_ValoreCompl_Valuta + ';' + PATR_ValoreCompl_Euro + ';' + PATR_Quote + ';' + Valuta_Operazione +
+						 ';' +
+						 Valore_Civilistico_Valuta + ';' + Valore_Civilistico_Euro + ';' + Valore_Prezzo_IAS + ';' +
+						 Valore_NominaleCompl_Divisa + ';' + Valore_NominaleCompl_Euro + ';' + Valore_Civilistico_Gruppo + ';' +
+						 Autonomia + ';' + Azioni_Partecipante + ';' + Perc_Diretta_Titolo + ';' + Perc_Diretta_Totale + ';' +
+						 AzioniDV_Partecipante + ';' + PercDV_Diretta_Titolo + ';' + PercDV_Diretta_Totale + ';' +
+						 Azioni_Gruppo + ';' + Perc_Gruppo_Titolo + ';' + Perc_Gruppo_Totale + ';' + AzioniDV_Gruppo + ';' +
+						 PercDV_Gruppo_Titolo + ';' + PercDV_Gruppo_Totale + ';' + Livello_FairValue + ';' +
+						 Perc_Equity_Ratio + ';' + Valore_Package + ';' + Riserva_AFS_Netta + ';' +
+						 Impairment_Anno_Individuale + ';' + Impairment_Anno_Consolidato + ';' + Valore_Consolidato + ';' +
+						 Valore_Consolidato_Gruppo + ';' + Di_Cui_Avviamenti + ';' + Riserva_AFS_Lorda + ';' +
+						 Delta_Valore_Civilistico + ';' + Data_Rif_BOFinance + ';' + Super_ISIN + ';' + 
+						 SNDG_Partecipante + ';' + Perc_SFP_Convertibile + ';' + space(250) AS record
+					   FROM SK_F2_FLUSSI.F2_T_EXP_MappaGruppo_Estesa
+					   WHERE Data_estrazione = @dataEstrazione
+							 AND Destinazione = @destinazione
+							 AND Flag_Scarto = 0
+					 ) t2
 
-        -- per tutte le destinazioni
-        SELECT *
-        INTO #tempMappaGruppo
-        FROM (
-               SELECT
-                 Codice_Partecipata                                                     AS Azienda,
-                 1                                                                      AS TipoRec,
-                 convert(NVARCHAR, Data_estrazione, 112) + ';' + Codice_Titolo + ';' + Descrizione_Titolo + ';' +
-                 Codice_Partecipata + ';' + Denom_Partecipata + ';' +
-                 Tipo_Operazione + ';' + Codice_Partecipante + ';' + Denom_Partecipante + ';' + Ind_Legale_Partecipata +
-                 ';' +
-                 Cap_Legale_Partecipata + ';' + Citta_Legale_Partecipata + ';' + Prov_Legale_Partecipata + ';' +
-                 Stato_Legale_Partecipata + ';' + Ex_Art_3639RM + ';' + Ind_Legale_Partecipante + ';' +
-                 Cap_Legale_Partecipante + ';' + Citta_Legale_Partecipante + ';' + Prov_Legale_Partecipante + ';' +
-                 Stato_Legale_Partecipante + ';' + Valuta_CS_Partecipante + ';' + CR_Partecipata + ';' +
-                 CF_Partecipata + ';' + Forma_Giuridica + ';' + UIC_Partecipata + ';' + Valuta_Bilancio + ';' +
-                 PIVA_Partecipata + ';' + Descrizione_ClassBI + ';' + Descrizione_Attivita + ';' + SNDG + ';' +
-                 ABI_Prevalente + ';' + NDG_Prevalente + ';' + NDG_Capogruppo + ';' + Gruppo_Bancario + ';' +
-                 Gruppo_Civilistico + ';' + Gruppo_Assicurativo + ';' + SAE + ';' + RAE + ';' + ATECO + ';' +
-                 Nazionalita + ';' + Gestore_Partecipazione + ';' + Quotata + ';' + Tipo_Quotazione + ';' +
-                 Metodo_ConsBI + ';' + Metodo_ConsIAS + ';' + Metodo_ConsFinrep + ';' + Data_Inserimento + ';' +
-                 Class_IAS_Gruppo + ';' + Class_Art2359_Gruppo + ';' + Class_IAS_Individuale + ';' +
-                 Class_Art2359_Individuale + ';' + Class_Monitoraggio + ';' + Class_Antitrust + ';' +
-                 Tipologia_FAG + ';' + Centro_Resp + ';' + CGU + ';' + SNDG_ControllataRif + ';' +
-                 Flag_OrgInterposto + ';' + Flag_OpQualificata + ';' + Tipo_LookThrough + ';' + Class_PNF + ';' +
-                 CS_Data + ';' + CS_Valuta + ';' + CS_Sottoscritto_Valuta + ';' + CS_Sottoscritto_Euro + ';' +
-                 CS_Deliberato_Valuta + ';' + CS_Deliberato_Euro + ';' + CS_Versato_Valuta + ';' + CS_Versato_Euro + ';'
-                 +
-                 CS_ValNominale_Unitario + ';' + CS_Azioni + ';' + CS_AzioniDV + ';' + CS_AzioniDVAO + ';' +
-                 PATR_ValoreCompl_Valuta + ';' + PATR_ValoreCompl_Euro + ';' + PATR_Quote + ';' + Valuta_Operazione +
-                 ';' +
-                 Valore_Civilistico_Valuta + ';' + Valore_Civilistico_Euro + ';' + Valore_Prezzo_IAS + ';' +
-                 Valore_NominaleCompl_Divisa + ';' + Valore_NominaleCompl_Euro + ';' + Valore_Civilistico_Gruppo + ';' +
-                 Autonomia + ';' + Azioni_Partecipante + ';' + Perc_Diretta_Titolo + ';' + Perc_Diretta_Totale + ';' +
-                 AzioniDV_Partecipante + ';' + PercDV_Diretta_Titolo + ';' + PercDV_Diretta_Totale + ';' +
-                 Azioni_Gruppo + ';' + Perc_Gruppo_Titolo + ';' + Perc_Gruppo_Totale + ';' + AzioniDV_Gruppo + ';' +
-                 PercDV_Gruppo_Titolo + ';' + PercDV_Gruppo_Totale + ';' + Livello_FairValue + ';' +
-                 Perc_Equity_Ratio + ';' + Valore_Package + ';' + Riserva_AFS_Netta + ';' +
-                 Impairment_Anno_Individuale + ';' + Impairment_Anno_Consolidato + ';' + Valore_Consolidato + ';' +
-                 Valore_Consolidato_Gruppo + ';' + Di_Cui_Avviamenti + ';' + Riserva_AFS_Lorda + ';' +
-                 Delta_Valore_Civilistico + ';' + Data_Rif_BOFinance + ';' + Super_ISIN + ';' + 
-                 SNDG_Partecipante + ';' + Perc_SFP_Convertibile + ';' + space(250) AS record
-               FROM SK_F2_FLUSSI.F2_T_EXP_MappaGruppo_Estesa
-               WHERE Data_estrazione = @dataEstrazione
-                     AND Destinazione = @destinazione
-                     AND Flag_Scarto = 0
-             ) t2
+      
+         
+					SELECT record
+					FROM (
+						   SELECT
+							 azienda,
+							 tiporec,
+							 record
+						   FROM #tempMappaGruppoHeaderOPA
+						   UNION ALL
+						   SELECT
+							 azienda,
+							 tiporec,
+							 record
+						   FROM #tempMappaGruppoOPA
+						 ) t2
+					ORDER BY t2.TipoRec, t2.Azienda
+        END  
+	END TRY
+	BEGIN CATCH
+	SET @outputNum = -1
+	SELECT @outputMsg = ERROR_MESSAGE()
 
-        IF @destinazione <> 'LP'
-          BEGIN
-            SELECT record
-            FROM (
-                   SELECT
-                     azienda,
-                     tiporec,
-                     record
-                   FROM #tempMappaGruppoInt
-                   UNION ALL
-                   SELECT
-                     azienda,
-                     tiporec,
-                     record
-                   FROM #tempMappaGruppo
-                 ) t2
-            ORDER BY t2.TipoRec, t2.Azienda
-          END
-        ELSE SELECT record
-             FROM #tempMappaGruppo
-             ORDER BY TipoRec, Azienda
-		END  -- gestione di tutte le altre casistiche
+	IF @@TRANCOUNT > 0
+		ROLLBACK TRANSACTION;
+	END CATCH;
 
-
-
-
-
-    END TRY
-    BEGIN CATCH
-    SET @outputNum = -1
-    SELECT @outputMsg = ERROR_MESSAGE()
-
-    IF @@TRANCOUNT > 0
-      ROLLBACK TRANSACTION;
-    END CATCH;
-
-    IF @@TRANCOUNT > 0
-      COMMIT TRANSACTION;
+	IF @@TRANCOUNT > 0
+		COMMIT TRANSACTION;
 
   END
   GO
