@@ -42,3 +42,16 @@ Posso bypassare area di stage mediante il comando git commit -a -m “”: in qu
 modo committo tutti i file che inizialmente erano tracciati.
 
  
+
+Creazione Flussi INTERSCAMBIO
+=============================
+
+Nomi file concordati:
+
+-   MAPPA_GRUPPO.TXT (destinatario OPA) ID 50
+
+-   MAPPA GRUPPO destinatario FITP0 ID 51
+
+-   ORGANI_SOCIALI.TXT per OPA 52
+
+-   PATTI_PARASOCIALI.TXT (ID 49) per OPA

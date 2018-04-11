@@ -20,6 +20,8 @@ WITH EXEC AS CALLER
 AS
 BEGIN    
 	DECLARE @dataRif date
+	-- data in cui viene eseguito import
+	DECLARE @dataImport date
 	DECLARE @id int
 	DECLARE @sndg nvarchar(20)
 	DECLARE @colore nvarchar(15)
@@ -42,6 +44,14 @@ BEGIN
 
 	-- Seleziono record da elaborare
 	-- ultimi inseriti in area stage
+	/*
+	Area stage viene ripulita prima di ogni import
+	elimino dalla tabella [F2_T_ALERT_LIMITI_DOPA] i record con tale data
+	per consentire più esecuzioni nello stesso giorno
+	*/
+	(select @dataImport = max(DATA_RIF) FROM SK_F2_BULK.F2_IMPORT_LIMITI_DOPA)
+	delete from  SK_F2.F2_T_ALERT_LIMITI_DOPA where DATA_RIF = @dataImport
+
 	DECLARE  LIMITI_CUR CURSOR FOR
 		SELECT ID
 			  ,SNDG
@@ -50,33 +60,33 @@ BEGIN
 			  ,SOGLIA
 			  ,DATA_RIF
 		  FROM SK_F2_BULK.F2_IMPORT_LIMITI_DOPA
-		  WHERE DATA_RIF = (select max(DATA_RIF) FROM SK_F2_BULK.F2_IMPORT_LIMITI_DOPA)
+		  WHERE DATA_RIF = @dataImport
 		  		
 		OPEN LIMITI_CUR
 		FETCH NEXT FROM LIMITI_CUR
 		INTO @id,@sndg,@colore,@blocco,@soglia,@dataRif
 		 WHILE (@@FETCH_STATUS = 0)
 			BEGIN
-			INSERT INTO [SK_F2].[F2_T_ALERT_LIMITI_DOPA]
-					   ([SNDG]
-					   ,[COLORE]
-					   ,[BLOCCO]
-					   ,[SOGLIA]
-					   ,[DATA_RIF])
-				 VALUES
-					   (@sndg
-					   ,CASE 
-							WHEN @blocco = '1' THEN 'R'
-							WHEN @colore = 'rosso' AND @blocco = '0' THEN 'R'
-							WHEN  @colore = 'verde' AND @blocco = '0'THEN 'V'
-							WHEN  @colore = 'giallo' AND @blocco = '0' THEN 'G'
-							WHEN  @colore = 'nero' AND @blocco = '0'THEN 'R'
-					    END
-					   ,CONVERT(bit,@blocco)
-					   ,convert(decimal(20,3),@soglia)
-					   ,@dataRif)
-			FETCH NEXT FROM LIMITI_CUR
-				INTO @id,@sndg,@colore,@blocco,@soglia,@dataRif
+				INSERT INTO [SK_F2].[F2_T_ALERT_LIMITI_DOPA]
+						   ([SNDG]
+						   ,[COLORE]
+						   ,[BLOCCO]
+						   ,[SOGLIA]
+						   ,[DATA_RIF])
+					 VALUES
+						   (@sndg
+						   ,CASE 
+								WHEN @blocco = '1' THEN 'R'
+								WHEN UPPER(@colore) = 'ROSSO' AND @blocco = '0' THEN 'R'
+								WHEN  UPPER(@colore) = 'VERDE' AND @blocco = '0'THEN 'V'
+								WHEN  UPPER(@colore) = 'GIALLO' AND @blocco = '0' THEN 'G'
+								WHEN  UPPER(@colore) = 'NERO' AND @blocco = '0'THEN 'R'
+							END
+						   ,CONVERT(bit,@blocco)
+						   ,convert(decimal(20,3),@soglia)
+						   ,@dataRif)
+				FETCH NEXT FROM LIMITI_CUR
+					INTO @id,@sndg,@colore,@blocco,@soglia,@dataRif
 			END
 
     END TRY
